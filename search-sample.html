@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<!--
+
+Copyright 2017 Google Inc. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-->
+<html>
+	<head>
+		<style>
+			body {
+				font-family: sans-serif;
+			}
+			#search {
+				text-align: center;
+			}
+				#search * {
+					font-size: 18px;
+					text-transform: uppercase;
+				}
+			#results {
+				width: 300px;
+				display: inline-block;
+				vertical-align: top;
+			}
+			#results img {
+				cursor: pointer;
+			}
+				#results img:hover {
+					opacity: 0.8;
+				}
+			#viewer {
+				width: calc(100% - 305px);
+				height: calc(100% - 80px);
+				display: inline-block;
+			}
+		</style>
+	</head>
+	<body>
+
+		<form id="search">
+			<input id="query" value="poly"></input>
+			<button id="button">search</button>
+		</form>
+		<span id="results"></span>
+		<span id="viewer"></span>
+
+		<script src="third_party/three.js/js/three.min.js"></script>
+		<script src="third_party/three.js/js/OBJLoader.js"></script>
+		<script src="third_party/three.js/js/MTLLoader.js"></script>
+		<script>
+
+			// THREE.JS VIEWER
+
+			const WIDTH = viewer.offsetWidth;
+			const HEIGHT = viewer.offsetHeight;
+
+			var sphere = new THREE.Sphere();
+			sphere.center.set( 0, 0.5, 0 );
+			sphere.radius = 5;
+
+			var camera = new THREE.PerspectiveCamera( 60, WIDTH / HEIGHT, 0.01, 100 );
+
+			var scene = new THREE.Scene();
+			scene.background = new THREE.Color( 0x222222 );
+
+			scene.add( new THREE.GridHelper( 10, 10 ) );
+
+			var ambient = new THREE.HemisphereLight( 0x66aaff, 0x886666, 0.5 );
+			ambient.position.set( -0.5, 0.75, -1 );
+			scene.add( ambient );
+
+			var light = new THREE.DirectionalLight( 0xffffff );
+			light.position.set( 1, 0.75, 0.5 );
+			scene.add( light );
+
+			var group = new THREE.Group();
+			scene.add( group );
+
+			var renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( WIDTH, HEIGHT );
+			viewer.appendChild( renderer.domElement );
+
+			function animate() {
+
+				var time = performance.now() / 3000;
+
+				camera.position.x = Math.sin( time ) * sphere.radius * 1.75;
+				camera.position.y = sphere.center.y + ( sphere.radius / 2 );
+				camera.position.z = Math.cos( time ) * sphere.radius * 1.75;
+				camera.lookAt( sphere.center );
+
+				renderer.render( scene, camera );
+				requestAnimationFrame( animate );
+
+			}
+
+			requestAnimationFrame( animate );
+
+
+			// POLY REST API
+
+			const API_KEY = '*** INSERT YOUR API KEY HERE ***';
+
+			function searchPoly( keywords, onLoad ) {
+
+				var url = `https://poly.googleapis.com/v1/assets?keywords=${keywords}&format=OBJ&key=${API_KEY}`;
+
+				var request = new XMLHttpRequest();
+				request.open( 'GET', url, true );
+				request.addEventListener( 'load', function ( event ) {
+
+					onLoad( JSON.parse( event.target.response ) );
+
+				} );
+				request.send( null );
+
+			}
+
+			function createImage( asset ) {
+
+				var image = document.createElement( 'img' );
+				image.src = asset.thumbnail.url;
+				image.style.width = '100px';
+				image.style.height = '75px';
+
+				var format = getFormat( 'OBJ', asset.formats );
+
+				if ( format !== undefined ) {
+
+					image.onclick = function () {
+
+						while ( group.children.length ) {
+
+							group.remove( group.children[ 0 ] );
+
+						}
+
+						var urlOBJ = format.root.url;
+						var urlMTL = format.resources[ 0 ].url;
+
+						var loader = new THREE.MTLLoader();
+						loader.load( urlMTL, function ( materials ) {
+
+							var loader = new THREE.OBJLoader();
+							loader.setMaterials( materials );
+							loader.load( urlOBJ, function ( object ) {
+
+								var box = new THREE.Box3();
+								box.setFromObject( object );
+								box.getBoundingSphere( sphere );
+
+								object.position.y = - box.min.y;
+								sphere.center.y = object.position.y;
+
+								group.add( object );
+
+							} );
+
+						} );
+
+					};
+
+				}
+
+				return image;
+
+			}
+
+			function getFormat( formatType, formats ) {
+
+				for ( var i = 0; i < formats.length; i ++ ) {
+
+					var format = formats[ i ];
+
+					if ( format.formatType === formatType ) return format;
+
+				}
+
+			}
+
+			function onResults( data ) {
+
+				while ( results.childNodes.length ) {
+
+					results.removeChild( results.firstChild );
+
+				}
+
+				var assets = data.assets;
+
+				if ( assets ) {
+
+					for ( var i = 0; i < assets.length; i ++ ) {
+
+						var asset = assets[ i ];
+
+						var image = createImage( asset );
+						results.appendChild( image );
+
+					}
+
+				} else {
+
+					results.innerHTML = '<center>NO RESULTS</center>';
+
+				}
+
+			}
+
+			search.addEventListener( 'submit', function ( event ) {
+
+				event.preventDefault()
+
+				searchPoly( query.value, onResults );
+
+			} );
+
+			button.click();
+
+			if (API_KEY.startsWith("**")) {
+				alert("Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.");
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--
+
+Copyright 2017 Google Inc. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-->
+<html lang="en">
+	<head>
+		<title></title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			html {
+				height: 100%;
+			}
+			body {
+				height: 100%;
+				font-family: sans-serif;
+				line-height: 24px;
+			}
+			#viewer {
+				width: 100%;
+				height: calc(100% - 80px);
+			}
+			#info {
+				padding: 20px;
+				text-align: center;
+			}
+			#asset_name {
+				font-size: 22px;
+				font-weight: bold;
+			}
+			#asset_author {
+				color: #888;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="viewer"></div>
+
+		<div id="info">
+			<span id="asset_name">Title</span><br/>
+			by <span id="asset_author">Author</span>
+		</div>
+
+		<script src="third_party/three.js/js/three.min.js"></script>
+		<script src="third_party/three.js/js/OBJLoader.js"></script>
+		<script src="third_party/three.js/js/MTLLoader.js"></script>
+		<script>
+
+			// THREE.JS VIEWER
+
+			const WIDTH = viewer.offsetWidth;
+			const HEIGHT = viewer.offsetHeight;
+
+			var camera = new THREE.PerspectiveCamera( 60, WIDTH / HEIGHT, 0.01, 100 );
+			camera.position.set( 5, 3, 5 );
+			camera.lookAt( 0, 1.5, 0 );
+
+			var scene = new THREE.Scene();
+			scene.background = new THREE.Color( 0x222222 );
+
+			scene.add( new THREE.GridHelper( 10, 10 ) );
+
+			var ambient = new THREE.HemisphereLight( 0x66aaff, 0x886666, 0.5 );
+			ambient.position.set( -0.5, 0.75, -1 );
+			scene.add( ambient );
+
+			var light = new THREE.DirectionalLight( 0xffffff );
+			light.position.set( 1, 0.75, 0.5 );
+			scene.add( light );
+
+			var renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( WIDTH, HEIGHT );
+			viewer.appendChild( renderer.domElement );
+
+			function animate() {
+
+				var time = performance.now() / 3000;
+
+				camera.position.x = Math.sin( time ) * 5;
+				camera.position.z = Math.cos( time ) * 5;
+				camera.lookAt( 0, 1.5, 0 );
+
+				renderer.render( scene, camera );
+				requestAnimationFrame( animate );
+
+			}
+
+			requestAnimationFrame( animate );
+
+			// POLY REST API
+
+			const API_KEY = '*** INSERT YOUR API KEY HERE ***';
+
+			function loadAsset( id ) {
+
+				var url = `https://poly.googleapis.com/v1/assets/${id}/?key=${API_KEY}`;
+
+				var request = new XMLHttpRequest();
+				request.open( 'GET', url, true );
+				request.addEventListener( 'load', function ( event ) {
+
+					var asset = JSON.parse( event.target.response );
+
+					asset_name.textContent = asset.displayName;
+					asset_author.textContent = asset.authorName;
+
+					var format = getFormat( 'OBJ', asset.formats );
+
+					if ( format !== undefined ) {
+
+						var urlOBJ = format.root.url;
+						var urlMTL = format.resources[ 0 ].url;
+
+						var loader = new THREE.MTLLoader();
+						loader.load( urlMTL, function ( materials ) {
+
+							var loader = new THREE.OBJLoader();
+							loader.setMaterials( materials );
+							loader.load( urlOBJ, function ( object ) {
+
+								var box = new THREE.Box3();
+								box.setFromObject( object );
+
+								object.position.y = box.max.y;
+
+								scene.add( object );
+
+							} );
+
+						} );
+
+					}
+
+				} );
+				request.send( null );
+
+			}
+
+			function getFormat( formatType, formats ) {
+
+				for ( var i = 0; i < formats.length; i ++ ) {
+
+					var format = formats[ i ];
+
+					if ( format.formatType === formatType ) return format;
+
+				}
+
+			}
+
+			if (API_KEY.startsWith("**")) {
+				alert("Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.");
+			}
+			loadAsset( '5vbJ5vildOq' );
+
+		</script>
+	</body>
+</html>

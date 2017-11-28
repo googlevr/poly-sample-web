@@ -1,0 +1,20 @@
+name: "three.js"
+description:
+    "Lightweight 3D library for WebGL."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://github.com/mrdoob/three.js"
+  }
+  url {
+    type: GIT
+    value: "https://github.com/mrdoob/three.js"
+  }
+  version: "62a32a2db8a78b1b8e752c909a68302e83f42202"
+  last_upgrade_date { year: 2017 month: 11 day: 15 }
+  license_type: NOTICE
+  local_modifications:
+    "Removed all unneeded files, kept minimal subset of needed files in"
+    "js/ subdirectory." 
+}
