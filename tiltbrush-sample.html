@@ -111,7 +111,7 @@ limitations under the License.
 					asset_name.textContent = asset.displayName;
 					asset_author.textContent = asset.authorName;
 
-					var format = getFormat( 'GLTF', asset.formats );
+					var format = asset.formats.find( format => { return format.formatType === 'GLTF'; } );
 
 					if ( format !== undefined ) {
 
@@ -131,21 +131,12 @@ limitations under the License.
 
 			}
 
-			function getFormat( formatType, formats ) {
+			if ( API_KEY.startsWith( '**' ) ) {
 
-				for ( var i = 0; i < formats.length; i ++ ) {
-
-					var format = formats[ i ];
-
-					if ( format.formatType === formatType ) return format;
-
-				}
+				alert( 'Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.' );
 
 			}
 
-			if (API_KEY.startsWith("**")) {
-				alert("Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.");
-			}
 			loadAsset( 'dBL4e9Ik5NA' );
 
 		</script>
