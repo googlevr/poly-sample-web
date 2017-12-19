@@ -75,11 +75,11 @@ limitations under the License.
 
 			scene.add( new THREE.GridHelper( 10, 10 ) );
 
-			var ambient = new THREE.HemisphereLight( 0x66aaff, 0x886666, 0.5 );
+			var ambient = new THREE.HemisphereLight( 0xbbbbff, 0x886666, 0.75 );
 			ambient.position.set( -0.5, 0.75, -1 );
 			scene.add( ambient );
 
-			var light = new THREE.DirectionalLight( 0xffffff );
+			var light = new THREE.DirectionalLight( 0xffffff, 0.75 );
 			light.position.set( 1, 0.75, 0.5 );
 			scene.add( light );
 
@@ -90,7 +90,7 @@ limitations under the License.
 
 			function animate() {
 
-				var time = performance.now() / 3000;
+				var time = performance.now() / 5000;
 
 				camera.position.x = Math.sin( time ) * 5;
 				camera.position.z = Math.cos( time ) * 5;
@@ -120,26 +120,39 @@ limitations under the License.
 					asset_name.textContent = asset.displayName;
 					asset_author.textContent = asset.authorName;
 
-					var format = getFormat( 'OBJ', asset.formats );
+					var format = asset.formats.find( format => { return format.formatType === 'OBJ'; } );
 
 					if ( format !== undefined ) {
 
-						var urlOBJ = format.root.url;
-						var urlMTL = format.resources[ 0 ].url;
+						var obj = format.root;
+						var mtl = format.resources.find( resource => { return resource.url.endsWith( 'mtl' ) } );
+
+						var path = obj.url.slice( 0, obj.url.indexOf( obj.relativePath ) );
 
 						var loader = new THREE.MTLLoader();
-						loader.load( urlMTL, function ( materials ) {
+						loader.setCrossOrigin( true );
+						loader.setTexturePath( path );
+						loader.load( mtl.url, function ( materials ) {
 
 							var loader = new THREE.OBJLoader();
 							loader.setMaterials( materials );
-							loader.load( urlOBJ, function ( object ) {
+							loader.load( obj.url, function ( object ) {
 
 								var box = new THREE.Box3();
 								box.setFromObject( object );
 
-								object.position.y = box.max.y;
+								// re-center
 
-								scene.add( object );
+								var center = box.getCenter();
+								center.y = box.min.y;
+								object.position.sub( center );
+
+								// scale
+
+								var scaler = new THREE.Group();
+								scaler.add( object );
+								scaler.scale.setScalar( 6 / box.getSize().length() );
+								scene.add( scaler );
 
 							} );
 
@@ -152,21 +165,12 @@ limitations under the License.
 
 			}
 
-			function getFormat( formatType, formats ) {
+			if ( API_KEY.startsWith( '**' ) ) {
 
-				for ( var i = 0; i < formats.length; i ++ ) {
-
-					var format = formats[ i ];
-
-					if ( format.formatType === formatType ) return format;
-
-				}
+				alert( 'Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.' );
 
 			}
 
-			if (API_KEY.startsWith("**")) {
-				alert("Sample incorrectly set up. Please enter your API Key for the Poly API in the API_KEY variable.");
-			}
 			loadAsset( '5vbJ5vildOq' );
 
 		</script>
