@@ -193,6 +193,7 @@ limitations under the License.
 
 						var loader = new THREE.MTLLoader();
 						loader.setCrossOrigin( true );
+						loader.setMaterialOptions( { ignoreZeroRGBs: true } );
 						loader.setTexturePath( path );
 						loader.load( mtl.url, function ( materials ) {
 
